@@ -1,0 +1,10 @@
+*.json
+*.js
+*.md
+*.yaml
+lib/
+typechain/
+coverage/
+typechain-types/
+.github
+.prettierrc

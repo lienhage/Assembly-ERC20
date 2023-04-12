@@ -1,0 +1,38 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node.js ${{ matrix.node-version }} environment
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm install --immutable
+      - name: Run unit test
+        run: npm run test
+  check:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: 18.x
+      - name: Install dependencies
+        run: npm install --immutable
+      - name: Check lint and format
+        run: npm run check

@@ -1,4 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-foundry";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-solhint";
 import "dotenv/config";
@@ -19,7 +20,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 10000,
       },
     },
   },
@@ -37,6 +38,9 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: `${ETHERSCAN_API_KEY}`,
   },
+  gasReporter: {
+    enabled: true
+  }
 };
 
 export default config;

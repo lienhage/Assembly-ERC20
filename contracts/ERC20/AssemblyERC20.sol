@@ -14,26 +14,67 @@ contract AssemblyERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // First 4 bytes of keccak256("ERC20: transfer from the zero address")
-    bytes4 public constant ERROR_TRANSFER_FROM_THE_ZERO_ADDRESS = 0xbaecc556;
+    uint32 public constant ERROR_TRANSFER_FROM_THE_ZERO_ADDRESS = 0xbaecc556;
     // First 4 bytes of keccak256("ERC20: transfer to the zero address")
-    bytes4 public constant ERROR_TRANSFER_TO_ZERO_ADDRESS = 0x0557e210;
+    uint32 public constant ERROR_TRANSFER_TO_ZERO_ADDRESS = 0x0557e210;
     // First 4 bytes of keccak256("ERC20: transfer amount exceeds balance")
-    bytes4 public constant ERROR_TRANSFER_AMOUNT_EXCEEDS_BALANCE = 0x4107e8a8;
+    uint32 public constant ERROR_TRANSFER_AMOUNT_EXCEEDS_BALANCE = 0x4107e8a8;
     // First 4 bytes of keccak256("ERC20: mint to the zero address")
-    bytes4 public constant ERROR_MINT_TO_THE_ZERO_ADDRESS = 0xfc0b381c;
+    uint32 public constant ERROR_MINT_TO_THE_ZERO_ADDRESS = 0xfc0b381c;
     // Fisrt 4 bytes of keccak256("ERC20: approve to the zero address")
-    bytes4 public constant ERROR_APPROVE_TO_THE_ZERO_ADDRESS = 0x24883cc5;
+    uint32 public constant ERROR_APPROVE_TO_THE_ZERO_ADDRESS = 0x24883cc5;
     // Fisrt 4 bytes of keccak256("ERC20: insufficient allowance")
-    bytes4 public constant ERROR_INSUFFICIENT_ALLOWANCE = 0x3b6607e0;
+    uint32 public constant ERROR_INSUFFICIENT_ALLOWANCE = 0x3b6607e0;
     // Fisrt 4 bytes of keccak256("ERC20: burn amount exceeds balance")
-    bytes4 public constant ERROR_BURN_AMOUNT_EXCEEDS_BALANCE = 0x149b126e;
+    uint32 public constant ERROR_BURN_AMOUNT_EXCEEDS_BALANCE = 0x149b126e;
     // Fisrt 4 bytes of keccak256("Only owner")
-    bytes4 public constant ERROR_CALLER_NOT_OWNER = 0x17d9f114;
+    uint32 public constant ERROR_CALLER_NOT_OWNER = 0x17d9f114;
 
-    constructor(string memory name_, string memory symbol_, address owner_) {
-        // _name = name_;
-        // _symbol = symbol_;
-        // assembly
+    /// @dev parameters: name & string
+    constructor(string memory name_, string memory symbol_) {
+        uint256 nameIndex;
+        uint256 nameSlot;
+        uint256 symbolIndex;
+        uint256 symbolSlot;
+        assembly {
+            nameIndex := name_
+            symbolIndex := symbol_
+            nameSlot := _name.slot
+            symbolSlot := _symbol.slot
+            // Set owner to msg.sender
+            sstore(_owner.slot, caller())
+        }
+        _storeStringOrBytes(nameIndex, nameSlot);
+        _storeStringOrBytes(symbolIndex, symbolSlot);
+    }
+
+    /// @dev store a string or bytes from `memory index` to `storage index`
+    function _storeStringOrBytes(uint256 memoryIndex, uint256 storageIndex) internal {
+        assembly {
+            let len := mload(memoryIndex)
+            let isMoreThan31Bytes := gt(len, 0x20)
+            switch isMoreThan31Bytes
+            case 0 {
+                let item := mload(add(memoryIndex, 0x20))
+                item := or(item, mul(len, 2))
+                sstore(storageIndex, item)
+            }
+            default {
+                // Else slot `index` will store 2 * length + 1
+                sstore(storageIndex, add(mul(len, 2), 1))
+                mstore(0, storageIndex)
+                let targetSlot := keccak256(0, 0x20)
+                let loopLen := len
+                let i := 0
+                // Use `signed greater than` here
+                // prettier-ignore
+                for {} sgt(loopLen, 0) {i := add(i, 1)} {
+                    // Store string or bytes start from storage `targetSlot` and from memory `memoryIndex + 0x20`
+                    sstore(add(targetSlot, i), mload(add(memoryIndex, mul(add(i,1), 0x20))))
+                    loopLen := sub(loopLen, 0x20)
+                }
+            }
+        }
     }
 
     /// @dev return a string or bytes at `slotIndex`
@@ -155,49 +196,6 @@ contract AssemblyERC20 {
     }
 
     /**
-     * @dev See {IERC20-transfer}.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     * - the caller must have a balance of at least `amount`.
-     */
-    function transfer(address, uint256) public returns (bool) {
-        assembly {
-            // Load calldata
-            let from := caller()
-            let to := calldataload(0x04)
-            let amount := calldataload(0x24)
-
-            if iszero(to) {
-                mstore(0, ERROR_TRANSFER_TO_ZERO_ADDRESS)
-                revert(0, 0x20)
-            }
-
-            // Get from balance slot and from balance
-            mstore(0, from)
-            mstore(0x20, 3)
-            let fromBalanceSlot := keccak256(0, 0x40)
-            let fromBalance := sload(fromBalanceSlot)
-            if gt(amount, fromBalance) {
-                mstore(0, ERROR_TRANSFER_AMOUNT_EXCEEDS_BALANCE)
-                revert(0, 0x20)
-            }
-            sstore(fromBalanceSlot, sub(fromBalance, amount))
-
-            // Get to balance slot and to balance
-            mstore(0, to)
-            mstore(0x20, 3)
-            let toBalanceSlot := keccak256(0, 0x40)
-            let toBalance := sload(toBalanceSlot)
-            sstore(toBalanceSlot, add(toBalance, amount))
-            // return true
-            mstore(0, 1)
-            return(0, 0x20)
-        }
-    }
-
-    /**
      * @dev See {IERC20-allowance}.
      */
     function allowance(address, address) public view returns (uint256) {
@@ -250,6 +248,50 @@ contract AssemblyERC20 {
     }
 
     /**
+     * @dev See {IERC20-transfer}.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - the caller must have a balance of at least `amount`.
+     */
+    function transfer(address, uint256) public returns (bool) {
+        assembly {
+            // Load calldata
+            let from := caller()
+            let to := calldataload(0x04)
+            let amount := calldataload(0x24)
+
+            if iszero(to) {
+                mstore(0, ERROR_TRANSFER_TO_ZERO_ADDRESS)
+                revert(0, 0x20)
+            }
+
+            // Get from balance slot and from balance
+            let balancesSlot := _balances.slot
+            mstore(0, from)
+            mstore(0x20, balancesSlot)
+            let fromBalanceSlot := keccak256(0, 0x40)
+            let fromBalance := sload(fromBalanceSlot)
+            if gt(amount, fromBalance) {
+                mstore(0, ERROR_TRANSFER_AMOUNT_EXCEEDS_BALANCE)
+                revert(0, 0x20)
+            }
+            sstore(fromBalanceSlot, sub(fromBalance, amount))
+
+            // Get to balance slot and to balance
+            mstore(0, to)
+            mstore(0x20, balancesSlot)
+            let toBalanceSlot := keccak256(0, 0x40)
+            let toBalance := sload(toBalanceSlot)
+            sstore(toBalanceSlot, add(toBalance, amount))
+            // return true
+            mstore(0, 1)
+            return(0, 0x20)
+        }
+    }
+
+    /**
      * @dev See {IERC20-transferFrom}.
      *
      * Emits an {Approval} event indicating the updated allowance. This is not
@@ -290,7 +332,11 @@ contract AssemblyERC20 {
                 mstore(0, ERROR_INSUFFICIENT_ALLOWANCE)
                 revert(0, 0x20)
             }
-            sstore(accountAllowanceSlot, sub(accountAllowance, amount))
+            // Check if allowances[_from][msg.sender] != type(uint256).max
+            if iszero(eq(accountAllowance, 0xffffffffffffffffffffffffffffffff)) {
+                // Subtract `amount` from allowances[_from][msg.sender] if so
+                sstore(accountAllowanceSlot, sub(accountAllowance, amount))
+            }
 
             // Get from balance slot and update from balance
             let balanceSlot := _balances.slot
@@ -361,7 +407,7 @@ contract AssemblyERC20 {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
-    function burn(address, uint256) external {
+    function burn(address, uint256) public {
         assembly {
             let account := calldataload(0x04)
             let amount := calldataload(0x24)

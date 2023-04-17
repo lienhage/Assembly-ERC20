@@ -2,23 +2,23 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import "../../contracts/ERC20/TestERC20.sol";
+import "../../contracts/ERC20/StandardERC20.sol";
 
 contract ERC20Test is Test {
-    TestERC20 token;
+    StandardERC20 token;
     address deployer;
     address A;
     address B;
 
     function setUp() external {
         deployer = makeAddr("deployer");
-        
+
         A = makeAddr("A");
 
         B = makeAddr("B");
 
         vm.prank(deployer);
-        token = new TestERC20("Standard ERC20 Token", "SET");
+        token = new StandardERC20("Standard ERC20 Token", "SET");
         vm.prank(deployer);
         token.mint(deployer, type(uint256).max);
         vm.label(address(token), "AssemblyToken");
@@ -53,14 +53,14 @@ contract ERC20Test is Test {
         vm.prank(deployer);
         bool success = token.approve(address(0xdead), 69 ether);
         assertTrue(success);
-        
+
         uint256 allowance = token.allowance(deployer, address(0xdead));
         assertEq(allowance, 69 ether);
     }
 
     function testTransfer() external {
         vm.startPrank(deployer);
-        
+
         bool resA = token.transfer(A, 1 wei);
         assertTrue(resA);
 

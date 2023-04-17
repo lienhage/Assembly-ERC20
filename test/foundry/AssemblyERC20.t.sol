@@ -12,7 +12,7 @@ contract AssemblyERC20Test is Test {
 
     function setUp() external {
         deployer = makeAddr("deployer");
-        
+
         A = makeAddr("A");
 
         B = makeAddr("B");
@@ -53,14 +53,14 @@ contract AssemblyERC20Test is Test {
         vm.prank(deployer);
         bool success = token.approve(address(0xdead), 69 ether);
         assertTrue(success);
-        
+
         uint256 allowance = token.allowance(deployer, address(0xdead));
         assertEq(allowance, 69 ether);
     }
 
     function testTransfer() external {
         vm.startPrank(deployer);
-        
+
         bool resA = token.transfer(A, 1 wei);
         assertTrue(resA);
 

@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract TestERC20 is ERC20 {
+contract StandardERC20 is ERC20 {
     address private owner;
 
-    modifier onlyOwner {
+    modifier onlyOwner() {
         _checkOwner();
         _;
     }

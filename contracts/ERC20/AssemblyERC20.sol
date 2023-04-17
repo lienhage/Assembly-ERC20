@@ -14,26 +14,26 @@ contract AssemblyERC20 {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     // First 4 bytes of keccak256("ERC20: transfer from the zero address")
-    bytes4 constant public ERROR_TRANSFER_FROM_THE_ZERO_ADDRESS   = 0xbaecc556;
+    bytes4 public constant ERROR_TRANSFER_FROM_THE_ZERO_ADDRESS = 0xbaecc556;
     // First 4 bytes of keccak256("ERC20: transfer to the zero address")
-    bytes4 constant public ERROR_TRANSFER_TO_ZERO_ADDRESS         = 0x0557e210;
+    bytes4 public constant ERROR_TRANSFER_TO_ZERO_ADDRESS = 0x0557e210;
     // First 4 bytes of keccak256("ERC20: transfer amount exceeds balance")
-    bytes4 constant public ERROR_TRANSFER_AMOUNT_EXCEEDS_BALANCE  = 0x4107e8a8;
+    bytes4 public constant ERROR_TRANSFER_AMOUNT_EXCEEDS_BALANCE = 0x4107e8a8;
     // First 4 bytes of keccak256("ERC20: mint to the zero address")
-    bytes4 constant public ERROR_MINT_TO_THE_ZERO_ADDRESS         = 0xfc0b381c;
+    bytes4 public constant ERROR_MINT_TO_THE_ZERO_ADDRESS = 0xfc0b381c;
     // Fisrt 4 bytes of keccak256("ERC20: approve to the zero address")
-    bytes4 constant public ERROR_APPROVE_TO_THE_ZERO_ADDRESS      = 0x24883cc5;
+    bytes4 public constant ERROR_APPROVE_TO_THE_ZERO_ADDRESS = 0x24883cc5;
     // Fisrt 4 bytes of keccak256("ERC20: insufficient allowance")
-    bytes4 constant public ERROR_INSUFFICIENT_ALLOWANCE           = 0x3b6607e0;
+    bytes4 public constant ERROR_INSUFFICIENT_ALLOWANCE = 0x3b6607e0;
     // Fisrt 4 bytes of keccak256("ERC20: burn amount exceeds balance")
-    bytes4 constant public ERROR_BURN_AMOUNT_EXCEEDS_BALANCE      = 0x149b126e;
+    bytes4 public constant ERROR_BURN_AMOUNT_EXCEEDS_BALANCE = 0x149b126e;
     // Fisrt 4 bytes of keccak256("Only owner")
-    bytes4 constant public ERROR_CALLER_NOT_OWNER                 = 0x17d9f114;
+    bytes4 public constant ERROR_CALLER_NOT_OWNER = 0x17d9f114;
 
     constructor(string memory name_, string memory symbol_, address owner_) {
         // _name = name_;
         // _symbol = symbol_;
-        // assembly 
+        // assembly
     }
 
     /// @dev return a string or bytes at `slotIndex`
@@ -50,15 +50,16 @@ contract AssemblyERC20 {
                 // Length is stored in 249 ~ 254 bits
                 // First we shift left 248 bits to extract the last byte, then we
                 // shift right 249 bits to extract the length from the last byte
-                let length := shr(249, shl(248 , slot))
+                let length := shr(249, shl(248, slot))
                 // Memory offset 0 ~ 0x3f is a scratch pad, 0x40 ~ 0x5f is the free memory
                 // pointer, and 0x60 ~ 0x7f is the zero slot. We don't need them for now,
                 // so we start from offset 0 to pack return data to avoid extra memory allocation
-                mstore(0, 0x20)     // Offset of the string
+                mstore(0, 0x20) // Offset of the string
                 mstore(0x20, length) // The word of the offset stores string or bytes's length
                 mstore(0x40, shl(8, shr(8, slot))) // Following the string or bytes's content
                 return(0, 0x60)
-            } default {
+            }
+            default {
                 // If the string or bytes's length is more than 31 bytes,
                 // it's length will be stored in 0 ~ 254 bits
                 let length := shr(1, slot)
@@ -73,7 +74,8 @@ contract AssemblyERC20 {
                 mstore(0x20, length)
                 let i := 0
                 // Use `signed greater than` here
-                for {} sgt(loopLength, 0) { i := add(i, 1) } {
+                // prettier-ignore
+                for {} sgt(loopLength, 0) {i := add(i, 1)} {
                     // We store the content from memory offset 0x40
                     mstore(mul(add(i, 2), 0x20), sload(add(targetSlot, i)))
                     loopLength := sub(loopLength, 0x20)
@@ -86,7 +88,7 @@ contract AssemblyERC20 {
     /**
      * @dev Returns the name of the token.
      */
-    function name() public view returns(string memory) {
+    function name() public view returns (string memory) {
         // Although use a hardcode expression will save more gas, i.e., _name at slot 0,
         // but as a demonstration, it's better to use a more readable expression
         uint256 nameSlot;
@@ -143,7 +145,7 @@ contract AssemblyERC20 {
      * @dev See {IERC20-balanceOf}.
      */
     function balanceOf(address account) public view returns (uint256) {
-        assembly{
+        assembly {
             // Mapping's value of a key is stored in slot keccak256(abi.encode(key, slotIndex))
             mstore(0, account)
             mstore(0x20, _balances.slot)
@@ -210,7 +212,7 @@ contract AssemblyERC20 {
             mstore(0, spender)
             let accountAllowance := sload(keccak256(0, 0x40))
             mstore(0, accountAllowance)
-            return (0, 0x20)
+            return(0, 0x20)
         }
     }
 
@@ -263,11 +265,7 @@ contract AssemblyERC20 {
      * - the caller must have allowance for ``from``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public returns (bool) {
+    function transferFrom(address, address, uint256) public returns (bool) {
         assembly {
             // Load calldata
             let from := calldataload(0x04)
